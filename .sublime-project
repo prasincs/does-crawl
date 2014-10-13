@@ -1,0 +1,6 @@
+{
+  "env": {
+    "GOROOT": "/usr/local/Cellar/go/1.3/libexec",  // same as go env reports,
+    "GOPATH": "$HOME/personal-projects/does-crawl"
+  }
+}

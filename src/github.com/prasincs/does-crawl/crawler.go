@@ -31,6 +31,7 @@ type HttpFetcher struct {
 type Result struct {
     url string
     body string
+    depth int
     links []string
     err error
 }
@@ -83,7 +84,7 @@ func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
             m[url] = true
             mapAccess <- m
  
-            r := fetch(url, fetcher)
+            r := fetch(url, depth, fetcher)
             if r.err != nil {
                 c <- r
                 close(c)
@@ -114,16 +115,16 @@ func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
 
 
 
-func fetch(url string, fetcher Fetcher) Result {
+func fetch(url string, depth int, fetcher Fetcher) Result {
     match, _ := regexp.MatchString("^(/|http:)", url)
     if (!match){
-        return Result{url, "", nil, nil}
+        return Result{url, "", depth, nil, nil}
     }
     body, links, err := fetcher.Fetch(url)
     if err != nil {
-        return Result{url, "", nil, err}
+        return Result{url, "", depth, nil, err}
     } else {
-        return Result{url, body, links, nil}
+        return Result{url, body, depth, links, nil}
     }
 }
 
