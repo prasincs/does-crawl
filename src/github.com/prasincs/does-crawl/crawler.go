@@ -87,9 +87,7 @@ func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
                 }
 
             }
-            for r := range multiplex(child_chs) {
-                //match, _ = regexp(MatchString)
-                
+            for r := range multiplex(child_chs) {                
                 c <- r
             }
             close(c)
