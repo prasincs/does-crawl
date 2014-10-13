@@ -39,6 +39,7 @@ type Url struct {
   Id int `json: "id"`
   Link string `json: "link"`
   Parent string `json: "parent"`
+  //Links []map[string] `json: "links"`
   LastCrawled string `json: "lastCrawled"`
 }
 

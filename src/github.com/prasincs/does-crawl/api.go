@@ -4,7 +4,7 @@ import (
   "fmt"
   "net/http"
   "strconv"
-
+  "time"
   "github.com/codegangsta/martini"
 )
 
@@ -32,6 +32,8 @@ func GetUrl(enc Encoder, db DB, parms martini.Params) (int, string) {
   return http.StatusOK, Must(enc.Encode(al))
 }
 
+
+
 func AddUrl(w http.ResponseWriter, r *http.Request, enc Encoder, db DB) (int, string) {
   al := getPostUrl(r)
   id, err := db.Add(al)
@@ -49,12 +51,25 @@ func AddUrl(w http.ResponseWriter, r *http.Request, enc Encoder, db DB) (int, st
   }
 }
 
+var httpFetcher = HttpFetcher{}
+
 // Parse the request body, load into an Album structure.
 func getPostUrl(r *http.Request) *Url {
   link, parent := r.FormValue("link"), r.FormValue("parent")
+  // Note: this is a terrible place to do this in
+  crawler := Crawl(link, 4, httpFetcher)
+  for req := range crawler {
+    if req.err != nil {
+      fmt.Println(req.err)
+    } else {
+      fmt.Printf("found: %s %q\n", req.url, req.links)
+    }
+  }
+  t := time.Now().Local()
   return &Url{
     Link:  link,
     Parent: parent,
+    LastCrawled: t.Format(time.RFC3339),
   }
 }
 

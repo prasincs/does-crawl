@@ -1,13 +1,16 @@
 package main
 import (
     "net/http"
+    "net/url"
     "code.google.com/p/go.net/html"
     "code.google.com/p/go.net/html/atom"
     "io"
     "fmt"
+    "log"
     "bytes"
     "strings"
     "regexp"
+    "path"
     //"sync"
     //"time"
     //"io/ioutil"
@@ -39,7 +42,17 @@ func IsCrawlableUrl(url string, parentUrl string) (bool){
     return false
 }
 
-    
+// Occassionally you get urls with query params too, simple append can send you into infinite loop..
+// Nobody likes Infinite Loops, except maybe people in Cupertino
+func ReconstructURL(_url string, parentUrl string) (string){
+    parsedUrl, err := url.Parse(parentUrl)
+    if (err != nil){
+        log.Println(err)
+    }
+
+    u := fmt.Sprintf("%s://%s", parsedUrl.Scheme, path.Join(parsedUrl.Host, parsedUrl.Path, _url))
+    return u
+}
 
 
 // Taken and modified from https://gist.github.com/dyoo/6064879 
@@ -82,7 +95,7 @@ func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
             child_chs := make([]<-chan Result, 0)
             for _, u := range r.links {
                 if (IsCrawlableUrl(u,url)){
-                    u = fmt.Sprintf("%s%s", url, u)
+                    u = ReconstructURL(u, url)
                     child_chs = append(child_chs, loop(u, depth-1))
                 }
 
