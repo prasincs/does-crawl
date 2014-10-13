@@ -59,7 +59,7 @@ var httpFetcher = HttpFetcher{}
 func getPostUrl(r *http.Request) (*Url, error) {
 	link, parent, maxDepthStr := r.FormValue("link"), r.FormValue("parent"), r.FormValue("maxDepth")
 	// Note: this is a terrible place to do the blocking crawling..
-	links := []CrawledLink{}
+
 	if maxDepthStr == "" {
 		maxDepthStr = "4"
 	}
@@ -68,6 +68,12 @@ func getPostUrl(r *http.Request) (*Url, error) {
 		return nil, err
 	}
 
+	return doCrawl(link, parent, maxDepth)
+
+}
+
+func doCrawl(link string, parent string, maxDepth int) (*Url, error) {
+	links := []CrawledLink{}
 	crawler := Crawl(link, maxDepth, httpFetcher)
 	for req := range crawler {
 		if req.err != nil {

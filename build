@@ -1,3 +1,4 @@
 #!/bin/bash
-export GOPATH=$PWD
-go build github.com/prasincs/does-crawl
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )" 
+export GOPATH=$SCRIPTPATH
+go build -o bin/does-crawl github.com/prasincs/does-crawl
