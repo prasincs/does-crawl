@@ -44,7 +44,7 @@ func IsCrawlableUrl(url string, parentUrl string) (bool){
 
 // Occassionally you get urls with query params too, simple append can send you into infinite loop..
 // Nobody likes Infinite Loops, except maybe people in Cupertino
-func ReconstructURL(_url string, parentUrl string) (string){
+func ReconstructUrl(_url string, parentUrl string) (string){
     parsedUrl, err := url.Parse(parentUrl)
     if (err != nil){
         log.Println(err)
@@ -95,7 +95,7 @@ func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
             child_chs := make([]<-chan Result, 0)
             for _, u := range r.links {
                 if (IsCrawlableUrl(u,url)){
-                    u = ReconstructURL(u, url)
+                    u = ReconstructUrl(u, url)
                     child_chs = append(child_chs, loop(u, depth-1))
                 }
 

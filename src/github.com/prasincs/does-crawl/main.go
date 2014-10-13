@@ -8,18 +8,6 @@ import (
   "fmt"
 )
 
-const (
-  numCrawlers = 2
-)
-
-var urls = []string{
-  "http://www.google.com/",
-  "http://golang.org/",
-  "http://blog.golang.org/",
-}
-
-
-
 var m *martini.Martini
 
 func init() {
