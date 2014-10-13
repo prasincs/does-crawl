@@ -3,32 +3,51 @@ import (
     "net/http"
     "code.google.com/p/go.net/html"
     "code.google.com/p/go.net/html/atom"
-    "strings"
     "io"
     "fmt"
-    "sync"
+    "bytes"
+    "strings"
+    "regexp"
+    //"sync"
     //"time"
     //"io/ioutil"
 )
-type Visited struct {
-    url_map map[Url]bool
-    mutex sync.Mutex
+
+// Interfaces influenced heavily by 
+type Fetcher interface {
+    // Fetch returns the body of URL and
+    // a slice of URLs found on that page.
+    Fetch(url string) (body string, urls []string, err error)
 }
 
-func (self *Visited) TestAndSetVisited(url string) bool {
-    defer func() {
-        self.url_map[url] = true
-        self.mutex.Unlock()
-    }()
+type HttpFetcher struct {
+
+}
+ 
+
+type Result struct {
+    url string
+    body string
+    links []string
+    err error
+}
+func IsCrawlableUrl(url string, parentUrl string) (bool){
+    match, _ := regexp.MatchString("^/", url)
+    if (strings.HasPrefix(url, parentUrl) || match){
+        return true
+    }
+    return false
+}
+
     
-    self.mutex.Lock()
-    return self.url_map[url]
-}
 
+
+// Taken and modified from https://gist.github.com/dyoo/6064879 
+// The Go playground #69 wasn't quite cutting it
 // Crawl uses fetcher to recursively crawl
 // pages starting with url, to a maximum of depth.
-func Crawl(url string, depth int, fetcher Fetcher, 
-           visited *Visited, wg *sync.WaitGroup) {
+// If the pages start with prefix /, it will try from the parent callee url
+func Crawl(url string, depth int, fetcher Fetcher) <-chan Result {
     mapAccess := make(chan map[string]bool, 1)
     mapAccess <- make(map[string]bool)
  
@@ -57,14 +76,20 @@ func Crawl(url string, depth int, fetcher Fetcher,
                 close(c)
                 return
             }
- 
+
             c <- r
  
             child_chs := make([]<-chan Result, 0)
             for _, u := range r.links {
-                child_chs = append(child_chs, loop(u, depth-1))
+                if (IsCrawlableUrl(u,url)){
+                    u = fmt.Sprintf("%s%s", url, u)
+                    child_chs = append(child_chs, loop(u, depth-1))
+                }
+
             }
             for r := range multiplex(child_chs) {
+                //match, _ = regexp(MatchString)
+                
                 c <- r
             }
             close(c)
@@ -74,43 +99,80 @@ func Crawl(url string, depth int, fetcher Fetcher,
     return loop(url, depth)
 }
 
-type Result struct {
-    url string
-    body string
-    links []string
-    err error
-}
 
 
-func (f Fetcher) Fetch(url string) (string, []string,
-                                        error) {
-    if res, ok := f[url]; ok {
-        return res.body, res.urls, nil
+func fetch(url string, fetcher Fetcher) Result {
+    match, _ := regexp.MatchString("^(/|http:)", url)
+    if (!match){
+        return Result{url, "", nil, nil}
     }
-    return "", nil, fmt.Errorf("not found: %s", url)
+    body, links, err := fetcher.Fetch(url)
+    if err != nil {
+        return Result{url, "", nil, err}
+    } else {
+        return Result{url, body, links, nil}
+    }
+}
+
+func multiplex(chs []<-chan Result) <-chan Result {
+    c := make(chan Result)
+    d := make(chan bool)
+    for _, ch := range chs {
+        go func(ch <-chan Result) {
+            for r := range ch {
+                c <- r
+            }
+            d <- true
+        }(ch)
+    }
+    go func() {
+        for i := 0; i < len(chs); i++ {
+            <-d
+        }
+        close(c)
+    }()
+    return c
+}
+
+
+func (hf HttpFetcher) Fetch (url string) (string, []string, error){
+    res, err := http.Get(url) // Figure out how to DI this
+    if err != nil {
+        fmt.Printf("ERROR: %s\n", err)
+    }
+    defer res.Body.Close()
+    // TODO - think of less crappy way to do this without copying
+    buf := new(bytes.Buffer)
+    buf.ReadFrom(res.Body)
+    r := strings.NewReader(buf.String())
+    urls :=  ExtractUrlsFromHtml(r)
+    fmt.Println(urls)
+    return buf.String(), urls, nil
+
 }
 
 
 
-
-func extractUrlsFromHtml(r io.Reader, parentUrl string, foundUrls chan string) {
+func ExtractUrlsFromHtml(r io.Reader) ([]string) {
     
     d := html.NewTokenizer(r)
+    urls := []string{}
     for { 
         // token type
         tokenType := d.Next() 
+
         if tokenType == html.ErrorToken {
-            return     
+            return urls
         }       
+
         token := d.Token()
-        //fmt.Println(token);
         switch tokenType {
             case html.StartTagToken: // <tag>
+                //fmt.Printf("here: token started %s\n", token.DataAtom)
                 if (token.DataAtom == atom.A){
                     for _, a := range token.Attr {
                         if a.Key == "href" {
-                            fmt.Printf("Found %s, Sending via channel\n",a.Val)
-                            foundUrls <- a.Val
+                            urls = append(urls, a.Val)
                         }
                     }
                 }
@@ -130,28 +192,5 @@ func extractUrlsFromHtml(r io.Reader, parentUrl string, foundUrls chan string) {
 
         }
     }
+    return urls
 }
-
-func processFoundUrls(urlsQueryChan chan string, foundUrls chan string){
-    for{
-           urlFound := <- foundUrls
-           fmt.Printf("Pocessing: %s\n", urlFound)
-           if (strings.HasPrefix(urlFound,"/")){
-                urlsQueryChan <- urlFound
-           }
-    }
-}
-
-func httpQueryToBody(urlsQueryChan chan string, foundUrls chan string){
-    fmt.Println("here");
-    for {
-        parentUrl := <-urlsQueryChan
-        resp, err := http.Get(<-urlsQueryChan)
-        if err != nil {
-            fmt.Printf("ERROR: %s\n", err)
-        }
-        defer resp.Body.Close()
-        extractUrlsFromHtml(resp.Body, parentUrl, foundUrls)
-        }
-}
-
