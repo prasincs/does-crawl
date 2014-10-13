@@ -29,8 +29,10 @@ func init() {
 		m: make(map[int]*Url),
 	}
 	// Fill the database
-	db.Add(&Url{Id: 1, Link: "google.com", Parent: ""})
-	db.Add(&Url{Id: 2, Link: "google.com/mail", Parent: "google.com"})
+
+	// TODO move to tests
+	//db.Add(&Url{Id: 1, Link: "google.com", Parent: ""})
+	//db.Add(&Url{Id: 2, Link: "google.com/mail", Parent: "google.com"})
 }
 
 type CrawledLink struct {

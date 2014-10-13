@@ -10,6 +10,7 @@ const (
 	ErrCodeNotExist         = 1
 	ErrCodeAlreadyExists    = 2
 	ErrInvalidValueSupplied = 3
+	ErrCrawlingFailed       = 4
 )
 
 // The serializable Error structure.
