@@ -14,21 +14,30 @@ import (
 var m *martini.Martini
 
 func init() {
+	log.Println("Initializing configuration")
+	configuration := GetConfiguration("conf/conf.json")
 	m = martini.New()
 	// Setup middleware
 	m.Use(martini.Recovery())
 	m.Use(martini.Logger())
-
+	static := martini.Static("public", martini.StaticOptions{Fallback: "/index.html", Exclude: "/api/v"})
+	m.Use(static)
 	m.Use(MapEncoder)
 	// Setup routes
 	r := martini.NewRouter()
-	r.Get(`/urls`, GetUrls)
-	r.Get(`/urls/:id`, GetUrl)
-	r.Post(`/urls`, AddUrl)
+	r.Get(`/api/v1/urls`, GetUrls)
+	r.Get(`/api/v1/urls/:id`, GetUrl)
+	r.Post(`/api/v1/urls`, AddUrl)
 	//r.Put(`/urls/:id`, UpdateUrl)
 	//r.Delete(`/urls/:id`, DeleteUrl)
-	// Inject database
-	m.MapTo(db, (*DB)(nil))
+	if configuration.Db.Type == "memory" {
+		// Inject database
+		m.MapTo(db, (*DB)(nil))
+
+	} else {
+		log.Fatal("Database type not configured.")
+	}
+	// TODO - add other types of databases
 	// Add the router action
 	m.Action(r.Handle)
 }
@@ -77,9 +86,11 @@ func usage() {
 }
 
 func main() {
+
 	portPtr := flag.Int("port", 9999, "an int")
 	flag.Parse()
 	fmt.Printf("Starting server at port %d\n", *portPtr)
+
 	err := http.ListenAndServe(fmt.Sprintf(":%d", *portPtr), m)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
