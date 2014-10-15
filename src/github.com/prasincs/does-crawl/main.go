@@ -35,7 +35,7 @@ func init() {
 		m.MapTo(db, (*DB)(nil))
 
 	} else {
-		log.Fatal("Database type not configured.")
+		log.Println("Database type not configured.")
 	}
 	// TODO - add other types of databases
 	// Add the router action
@@ -43,10 +43,9 @@ func init() {
 }
 
 //Taken from https://github.com/PuerkitoBio/martini-api-example/blob/master/server.go
-
 // The regex to check for the requested format (allows an optional trailing
 // slash).
-var rxExt = regexp.MustCompile(`(\.(?:xml|text|json))\/?$`)
+var rxExt = regexp.MustCompile(`(\.(?:text|json))\/?$`)
 
 // MapEncoder intercepts the request's URL, detects the requested format,
 // and injects the correct encoder dependency for this request. It rewrites
@@ -67,9 +66,6 @@ func MapEncoder(c martini.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	// Inject the requested encoder
 	switch ft {
-	case ".xml":
-		c.MapTo(xmlEncoder{}, (*Encoder)(nil))
-		w.Header().Set("Content-Type", "application/xml")
 	case ".text":
 		c.MapTo(textEncoder{}, (*Encoder)(nil))
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")

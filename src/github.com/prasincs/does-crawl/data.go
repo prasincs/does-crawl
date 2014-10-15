@@ -18,21 +18,35 @@ type DB interface {
 }
 
 var (
-	ErrAlreadyExists = errors.New("album already exists")
+	// Error Messages specific to data
+	ErrAlreadyExists = errors.New("url already exists")
+)
+
+type CrawlJobStatus string
+
+const (
+	Init     CrawlJobStatus = "initializing"
+	Started  CrawlJobStatus = "started"
+	Finished CrawlJobStatus = "finished"
 )
 
 // The one and only database instance.
 var db DB
 
+// The initialization parameter for the In-Memory Database
 func init() {
-	db = &urlsDB{
-		m: make(map[int]*Url),
-	}
+	InitializeDB()
 	// Fill the database
 
 	// TODO move to tests
 	//db.Add(&Url{Id: 1, Link: "google.com", Parent: ""})
 	//db.Add(&Url{Id: 2, Link: "google.com/mail", Parent: "google.com"})
+}
+
+func InitializeDB() {
+	db = &urlsDB{
+		m: make(map[int]*Url),
+	}
 }
 
 type CrawledLink struct {
@@ -50,7 +64,18 @@ type Url struct {
 	LastCrawled string        `json: "lastCrawled"`
 }
 
-// Thread-safe in-memory map of urls.
+// CrawlJob is used to keep track of various crawl jobs that could be running
+// This allows the crawl request to be processed asynchronously and return the user
+// a Url object that can be populated with links at a later time.
+type CrawlJob struct {
+	Id        int            `json: "id"`
+	UrlId     int            `json: "urlId"` // making it explicit for tracking
+	status    CrawlJobStatus `json: "status"`
+	StartTime string         `json: "startTime"`
+	EndTime   string         `json: "endTime"`
+}
+
+// simple database construct for storing urls and ids
 type urlsDB struct {
 	sync.RWMutex
 	m   map[int]*Url
@@ -71,6 +96,12 @@ func (db *urlsDB) GetAll() []*Url {
 		i++
 	}
 	return ar
+}
+
+func (db *urlsDB) GetCount() int {
+	db.RLock()
+	defer db.RUnlock()
+	return len(db.m)
 }
 
 // Get returns the url identified by the id, or nil.

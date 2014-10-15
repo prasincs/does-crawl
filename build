@@ -1,4 +1,11 @@
 #!/bin/bash
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )" 
 export GOPATH=$SCRIPTPATH
+PACKAGE=github.com/prasincs/does-crawl
+go test $PACKAGE -v
+if [ $? != "0" ]; then
+  echo "Fix your code.. the tests are failing"
+  exit 1
+fi
+
 go build -o bin/does-crawl github.com/prasincs/does-crawl
