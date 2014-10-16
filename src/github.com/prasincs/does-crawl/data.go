@@ -49,12 +49,6 @@ func InitializeDB() {
 	}
 }
 
-type CrawledLink struct {
-	Link   string `json: "link"`
-	Parent string `json: "parent"`
-	Depth  int    `json: "depth"`
-}
-
 type Url struct {
 	Id          int           `json: "id"`
 	Link        string        `json: "link"`
@@ -62,17 +56,6 @@ type Url struct {
 	MaxDepth    int           `json: "maxDepth"`
 	Links       []CrawledLink `json: "links"`
 	LastCrawled string        `json: "lastCrawled"`
-}
-
-// CrawlJob is used to keep track of various crawl jobs that could be running
-// This allows the crawl request to be processed asynchronously and return the user
-// a Url object that can be populated with links at a later time.
-type CrawlJob struct {
-	Id        int            `json: "id"`
-	UrlId     int            `json: "urlId"` // making it explicit for tracking
-	status    CrawlJobStatus `json: "status"`
-	StartTime string         `json: "startTime"`
-	EndTime   string         `json: "endTime"`
 }
 
 // simple database construct for storing urls and ids
